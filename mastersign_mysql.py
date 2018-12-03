@@ -178,8 +178,9 @@ def mirror(cfg, src_cfg_name, trg_cfg_name,
             import_command,
             '--defaults-extra-file=' + trg_cfg_file.path,
             '--default-character-set=utf8mb4',
-            trg_schema,
         ]
+        if table_name:
+            import_args.append(trg_schema)
         export_proc = subprocess.Popen(export_args, stdout=subprocess.PIPE)
         import_proc = subprocess.Popen(import_args, stdin=export_proc.stdout,
                                        stdout=s_std.file, stderr=s_err.file)
