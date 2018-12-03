@@ -5,21 +5,25 @@ import sys
 import argparse
 import fnmatch
 from mastersign_config import Configuration
-from mastersign_mysql import connect, mirror
+from mastersign_mysql import connect, execute_sql, mirror
 
 
 __version__ = '0.1.1'
 
 
-def drop_schema(conn, name):
-    with conn.cursor() as cur:
-        cur.execute('DROP DATABASE IF EXISTS `{}`'.format(name))
+def recreate_schema(cfg, server_cfg_name, name):
+    return execute_sql(
+        cfg, server_cfg_name,
+        'DROP DATABASE IF EXISTS `{}`;\n'
+        'CREATE DATABASE `{}` DEFAULT CHARACTER SET utf8mb4;'.format(name, name),
+        use_database=False)
 
 
-def create_schema(conn, name):
-    with conn.cursor() as cur:
-        cur.execute(
-            'CREATE DATABASE `{}` DEFAULT CHARACTER SET utf8mb4'.format(name))
+def create_schema(cfg, server_cfg_name, name):
+    return execute_sql(
+        cfg, server_cfg_name,
+        'CREATE DATABASE IF NOT EXISTS `{}` DEFAULT CHARACTER SET utf8mb4'.format(name),
+        use_database=False)
 
 
 def get_tables(conn):
@@ -44,9 +48,6 @@ def filter_table_names(tables, includes=None, excludes=None):
         return True
     return list(filter(lambda t: pred(t), tables))
 
-
-def mirror_table(cfg, table_name, table_schema, server_name):
-    pass
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -87,6 +88,13 @@ def run():
     if not target_schema:
         raise Exception('No target schema specified.')
 
+    if config.bool(mirror_cfg_group, 'drop_schema'):
+        print("Recreating target database `{}` ...".format(target_schema))
+        recreate_schema(config, args.target, target_schema)
+    else:
+        print("Creating target database `{}` if not exist ...".format(target_schema))
+        create_schema(config, args.target, target_schema)
+
     if args.whole_database or config.bool(mirror_cfg_group, 'whole_schema'):
         print('Copying whole database ...\n  Source: {}/{}\n  Target: {}/{}'.format(
             config.str(source_cfg_group, 'host'), source_schema,
@@ -96,8 +104,7 @@ def run():
             return True
 
         mirror(config, args.source, args.target, source_schema, target_schema,
-               drop_db=config.bool(mirror_cfg_group, 'drop_schema'),
-               drop_table=False)
+               drop_table=(not config.bool(mirror_cfg_group, 'drop_schema')))
     else:
         print('Copying tables ...\n  Source: {}/{}\n  Target: {}/{}'.format(
             config.str(source_cfg_group, 'host'), source_schema,
@@ -129,20 +136,12 @@ def run():
         if args.dry:
             return True
 
-        if config.bool(mirror_cfg_group, 'drop_schema'):
-            target_conn = connect(config, args.target)
-            try:
-                print("Dropping target database `{}` ...".format(target_schema))
-                drop_schema(target_conn, target_schema)
-                print("Recreating target database `{}` ...".format(target_schema))
-                create_schema(target_conn, target_conn)
-            finally:
-                target_conn.close()
         for table in selected_tables:
             print('Copying table {}'.format(table))
             try:
                 mirror(config, args.source, args.target, source_schema, target_schema,
-                       table_name=table, drop_table=True)
+                       table_name=table,
+                       drop_table=(not config.bool(mirror_cfg_group, 'drop_schema')))
             except KeyboardInterrupt:
                 print("Cancelled by user.")
                 return False
