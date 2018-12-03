@@ -19,7 +19,7 @@ For the `config.ini` see section _Example Configuration_.
 docker run --rm -ti \
     -v $(pwd)/config.ini:/app/config.ini \
     mastersign/mysql-mirror \
-    b a
+    a b
 ~~~
 
 ## Example Configuration
