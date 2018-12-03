@@ -8,7 +8,7 @@ from mastersign_config import Configuration
 from mastersign_mysql import connect, mirror
 
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 
 def drop_schema(conn, name):
