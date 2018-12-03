@@ -1,0 +1,39 @@
+# Expected secret variables
+# - REGISTRY: The fully qualified domain name of the private registry (HTTPS)
+# - REGISTRY_USER: The login user for the private registry
+# - REGISTRY_PASSWD: The login password for the private registry
+
+variables:
+  IMAGE_NAME: "$REGISTRY/mysql-mirror"
+
+before_script:
+- echo $REGISTRY_PASSWD | docker login -u $REGISTRY_USER --password-stdin $REGISTRY
+
+stages:
+- build
+- publish
+- deploy
+
+build:image:
+  stage: build
+  except:
+  - tags
+  tags:
+  - docker
+  script:
+  - docker build --pull -t $IMAGE_NAME:dev .
+  - docker run --rm -i $IMAGE_NAME:dev -v
+  - docker rmi $IMAGE_NAME:dev
+
+publish:image:
+  stage: publish
+  only:
+  - tags
+  tags:
+  - docker
+  script:
+  - docker build --pull -t $IMAGE_NAME:dev .
+  - docker run --rm -i $IMAGE_NAME:dev -v
+  - docker tag $IMAGE_NAME:dev $IMAGE_NAME:latest
+  - docker push $IMAGE_NAME:latest
+  - docker rmi $IMAGE_NAME:dev
