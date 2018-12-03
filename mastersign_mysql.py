@@ -100,7 +100,8 @@ def _execute_sql_script(cfg, host_cfg_name,
                 proc = subprocess.run(args, stdin=sfd,
                                       stdout=s_std.file, stderr=s_err.file)
         else:
-            proc = subprocess.run(args, input=script_text,
+            script_data = bytearray(script_text, 'utf-8')
+            proc = subprocess.run(args, input=script_data,
                                         stdout=s_std.file, stderr=s_err.file)
         return proc.returncode == 0 if proc else False
 
