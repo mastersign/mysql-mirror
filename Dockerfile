@@ -22,6 +22,7 @@ RUN apt-get update \
 
 # Install additional OS packages
 RUN install_clean \
+		mariadb-client \
         python3-pymysql
 
 # Install application requirements
