@@ -8,7 +8,7 @@ from mastersign_config import Configuration
 from mastersign_mysql import connect, execute_sql, mirror
 
 
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 
 
 def recreate_schema(cfg, server_cfg_name, name):
