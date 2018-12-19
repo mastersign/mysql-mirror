@@ -9,6 +9,7 @@ while loading the connection informations from a
 import sys
 import os
 import subprocess
+import re
 import tempfile
 import pymysql.cursors
 
@@ -128,6 +129,17 @@ def execute_sql(cfg, host_cfg_name, sql,
                      default_charset=default_charset)
 
 
+def _get_mysqldump_version(command):
+    version_text = subprocess.check_output((command, '--version'), timeout=10, encoding='utf-8')
+    m8 = re.search(r"Ver (8\.[\d\.]+)", version_text)
+    if m8:
+        return m8[1]
+    m5 = re.search(r"Distrib (5\.[\d\.]+)", version_text)
+    if m5:
+        return m5[1]
+    return None
+
+
 def mirror(cfg, src_cfg_name, trg_cfg_name,
            src_schema, trg_schema, table_name=None,
            export_command='mysqldump', import_command='mysql',
@@ -148,6 +160,9 @@ def mirror(cfg, src_cfg_name, trg_cfg_name,
             '--default-character-set=utf8mb4',
             '--net_buffer_length=' + str(buffer_length),
         ]
+        mysqldump_version = _get_mysqldump_version(export_command)
+        if mysqldump_version and mysqldump_version[:2] == '8.':
+            export_args.append('--column-statistics=0')
         if drop_table:
             export_args.append('--add-drop-table')
         else:
